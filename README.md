@@ -2,5 +2,12 @@
 
 ## How to run
 
+Firstly, clone the repo, then CD to the project file
+
 ```cd parallel-cnn-c```
-```gcc -o build/cnn_exec src/*.c -Iinclude -lm```
+
+Then
+
+```make```
+
+```./build/cnn_exec```
