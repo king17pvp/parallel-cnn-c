@@ -1,42 +1,66 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
 #include "cnn.h"
 #include "utils.h"
 
 int main() {
     srand(time(NULL));
-    CNN cnn;
 
-    cnn.input.data = malloc(sizeof(float) * INPUT_SIZE * INPUT_SIZE);
-    cnn.conv.weights = malloc(sizeof(float) * FILTER_SIZE * FILTER_SIZE);
-    cnn.conv_out.data = malloc(sizeof(float) * (INPUT_SIZE - FILTER_SIZE + 1) * (INPUT_SIZE - FILTER_SIZE + 1));
-    cnn.pool_out.data = malloc(sizeof(float) * FC_INPUT_SIZE);
-    cnn.flat_out.data = malloc(sizeof(float) * FC_INPUT_SIZE);
-    cnn.fc.weights = malloc(sizeof(float) * FC_OUTPUT_SIZE * FC_INPUT_SIZE);
-    cnn.fc.biases = malloc(sizeof(float) * FC_OUTPUT_SIZE);
+    CNN cnn = {0};
+    cnn.input_width = 256;
+    cnn.input_height = 256;
+    cnn.input_channels = 1;
 
-    // Fill with test data (manually or via file)
-    for (int i = 0; i < INPUT_SIZE * INPUT_SIZE; i++) cnn.input.data[i] = (i < 27) ? 0.5f : 0.2f;
-    for (int i = 0; i < FILTER_SIZE * FILTER_SIZE; i++) cnn.conv.weights[i] = rand_normal(0.0f, 1.0f);
-    cnn.conv.bias = rand_normal(0.0f, 1.0f);
-    for (int i = 0; i < FC_OUTPUT_SIZE * FC_INPUT_SIZE; i++) cnn.fc.weights[i] = rand_normal(0.0f, 1.0f);
-    for (int i = 0; i < FC_OUTPUT_SIZE; i++) cnn.fc.biases[i] = rand_normal(0.0f, 1.0f);
+    int kernel_size = 5;
+    int max_pool_stride = 2;
+    int hidden_dim = 128;
+    int current_width = cnn.input_width;
+    int current_height = cnn.input_height;
+    int current_channels = cnn.input_channels;
+
+    int input_volume = current_width * current_height * current_channels;
+    cnn.input_data = malloc(sizeof(float) * input_volume);
+    for (int i = 0; i < input_volume; i++)
+        cnn.input_data[i] = rand_normal(0.0f, 1.0f);
+
+    // Add convolutional layers
+    for (int i = 0; i < 3; ++i) {
+        int out_channels = (i + 1) * 4; // increase depth
+        add_conv_layer(&cnn, out_channels, kernel_size, current_channels, 0.2f);
+        current_width = (current_width - kernel_size + 1) / max_pool_stride;
+        current_height = (current_height - kernel_size + 1) / max_pool_stride;
+        current_channels = out_channels;
+        printf("After conv layer %d: %d x %d x %d\n", i + 1, current_width, current_height, current_channels);
+    }
+
+    // Flatten size
+    int flatten_size = current_width * current_height * current_channels;
+
+    // Add fully connected layers
+    int i = 0;
+    int in_dim = flatten_size;
+    while (hidden_dim > 1) {
+        add_fc_layer(&cnn, in_dim, hidden_dim, 0.1f);
+        printf("Vector after FC layer %d: %d -> %d\n", i + 1, in_dim, hidden_dim);
+        in_dim = hidden_dim;
+        hidden_dim /= 2;
+        i++;
+    }
 
     cnn_forward(&cnn);
-    printf("CNN Output: %f\n", cnn.output[0]);
-    printf("Conv[0]: %f\n", cnn.conv_out.data[0]);
-    printf("Pool[0]: %f\n", cnn.pool_out.data[0]);
-    printf("Flat[0]: %f\n", cnn.flat_out.data[0]);
+    printf("CNN Output: %f\n", cnn.output);
 
-    // Free memory
-    free(cnn.input.data);
-    free(cnn.conv.weights);
-    free(cnn.conv_out.data);
-    free(cnn.pool_out.data);
-    free(cnn.flat_out.data);
-    free(cnn.fc.weights);
-    free(cnn.fc.biases);
+    // Cleanup
+    for (int i = 0; i < cnn.num_conv_layers; i++) {
+        free(cnn.conv_layers[i].weights);
+        free(cnn.conv_layers[i].biases);
+    }
+    for (int i = 0; i < cnn.num_fc_layers; i++) {
+        free(cnn.fc_layers[i].weights);
+        free(cnn.fc_layers[i].biases);
+    }
+    free(cnn.input_data);
 
     return 0;
 }
