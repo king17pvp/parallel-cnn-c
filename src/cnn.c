@@ -132,4 +132,3 @@ void cnn_forward(CNN *cnn) {
 
     cnn->output = v.data[0];
     free(v.data);
-}

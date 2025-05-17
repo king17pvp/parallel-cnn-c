@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include "utils.h"
-
+#include <stdlib.h>
+#include <math.h>
 float relu(float x) {
     return x > 0 ? x : 0;
 }
