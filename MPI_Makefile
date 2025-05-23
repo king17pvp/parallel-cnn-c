@@ -1,0 +1,20 @@
+# Use MPI compiler wrapper
+CC = mpicc
+CFLAGS = -Iinclude -O2
+LDFLAGS = -lm
+
+SRC = src/main.c src/cnn.c src/utils.c
+OBJ = $(SRC:.c=.o)
+
+TARGET = build/cnn_exec
+
+all: $(TARGET)
+
+$(TARGET): $(SRC)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+run: $(TARGET)
+	mpirun -np 64 ./$(TARGET)
+
+clean:
+	rm -f $(TARGET)
