@@ -3,7 +3,7 @@
 
 #define MAX_CONV_LAYERS 10
 #define MAX_FC_LAYERS 10
-
+#include "mpi.h"
 // 3D image/tensor
 typedef struct {
     int width, height, channels;
@@ -44,8 +44,9 @@ typedef struct {
     float output;
 } CNN;
 
-void add_conv_layer(CNN *cnn, int out_channels, int kernel_size, int in_channels, float stddev);
-void add_fc_layer(CNN *cnn, int in_features, int out_features, float stddev);
+void add_conv_layer(CNN *cnn, int out_channels, int kernel_size, int in_channels, float mean, float stddev);
+void add_fc_layer(CNN *cnn, int in_features, int out_features, float mean, float stddev);
 void cnn_forward(CNN *cnn);
+void cnn_forward_mpi(CNN *cnn, MPI_Comm comm);
 
 #endif

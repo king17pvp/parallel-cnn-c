@@ -2,8 +2,8 @@
 #include <math.h>
 #include "cnn.h"
 #include "utils.h"
-
-void add_conv_layer(CNN *cnn, int out_channels, int kernel_size, int in_channels, float stddev) {
+#include "mpi.h"
+void add_conv_layer(CNN *cnn, int out_channels, int kernel_size, int in_channels, float mean, float stddev) {
     ConvLayer *layer = &cnn->conv_layers[cnn->num_conv_layers++];
     int kernel_area = kernel_size * kernel_size;
     int total_weights = out_channels * in_channels * kernel_area;
@@ -13,21 +13,21 @@ void add_conv_layer(CNN *cnn, int out_channels, int kernel_size, int in_channels
     layer->weights = malloc(sizeof(float) * total_weights);
     layer->biases = malloc(sizeof(float) * out_channels);
     for (int i = 0; i < total_weights; i++)
-        layer->weights[i] = rand_normal(0.0f, stddev);
+        layer->weights[i] = rand_normal(mean, stddev);
     for (int i = 0; i < out_channels; i++)
-        layer->biases[i] = rand_normal(0.0f, stddev);
+        layer->biases[i] = rand_normal(mean, stddev);
 }
 
-void add_fc_layer(CNN *cnn, int in_features, int out_features, float stddev) {
+void add_fc_layer(CNN *cnn, int in_features, int out_features, float mean, float stddev) {
     FullyConnectedLayer *layer = &cnn->fc_layers[cnn->num_fc_layers++];
     layer->in_features = in_features;
     layer->out_features = out_features;
     layer->weights = malloc(sizeof(float) * in_features * out_features);
     layer->biases = malloc(sizeof(float) * out_features);
     for (int i = 0; i < in_features * out_features; i++)
-        layer->weights[i] = rand_normal(0.0f, stddev);
+        layer->weights[i] = rand_normal(mean, stddev);
     for (int i = 0; i < out_features; i++)
-        layer->biases[i] = rand_normal(0.0f, stddev);
+        layer->biases[i] = rand_normal(mean, stddev);
 }
 
 Tensor3D conv_forward(Tensor3D input, ConvLayer *layer) {
@@ -54,7 +54,7 @@ Tensor3D conv_forward(Tensor3D input, ConvLayer *layer) {
                     }
                 }
                 int out_idx = oc * out_h * out_w + i * out_w + j;
-                output_data[out_idx] = leaky_relu(sum + layer->biases[oc]);
+                output_data[out_idx] = relu(sum + layer->biases[oc]);
             }
         }
     }
@@ -62,7 +62,167 @@ Tensor3D conv_forward(Tensor3D input, ConvLayer *layer) {
     free(input.data);
     return (Tensor3D){ out_w, out_h, out_ch, output_data };
 }
+Tensor3D conv_forward_mpi_by_row(Tensor3D input, ConvLayer *layer, MPI_Comm comm) {
+    int rank, size;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
 
+    int out_w = input.width - layer->kernel_size + 1;
+    int out_h = input.height - layer->kernel_size + 1;
+    int out_ch = layer->out_channels;
+    int in_ch = layer->in_channels;
+    int ks = layer->kernel_size;
+    int total_out = out_w * out_h * out_ch;
+
+    // Determine rows per process
+    int rows_per_proc = out_h / size;
+    int rem = out_h % size;
+    int my_rows = (rank < rem) ? rows_per_proc + 1 : rows_per_proc;
+    int start_row = rank * rows_per_proc + (rank < rem ? rank : rem);
+
+    // Allocate output for this process
+    float *my_output = malloc(sizeof(float) * my_rows * out_w * out_ch);
+
+    for (int oc = 0; oc < out_ch; oc++) {
+        for (int i = 0; i < my_rows; i++) {
+            int global_i = start_row + i;
+            for (int j = 0; j < out_w; j++) {
+                float sum = 0.0f;
+                for (int ic = 0; ic < in_ch; ic++) {
+                    for (int ki = 0; ki < ks; ki++) {
+                        for (int kj = 0; kj < ks; kj++) {
+                            int in_y = global_i + ki;
+                            int in_x = j + kj;
+                            int in_idx = ic * input.height * input.width + in_y * input.width + in_x;
+                            int w_idx = oc * in_ch * ks * ks + ic * ks * ks + ki * ks + kj;
+                            sum += input.data[in_idx] * layer->weights[w_idx];
+                        }
+                    }
+                }
+                int out_idx = oc * my_rows * out_w + i * out_w + j;
+                my_output[out_idx] = relu(sum + layer->biases[oc]);
+            }
+        }
+    }
+
+    // Prepare to gather results to rank 0
+    float *output_data = NULL;
+    int *recvcounts = NULL, *displs = NULL;
+    if (rank == 0) {
+        output_data = malloc(sizeof(float) * total_out);
+        recvcounts = malloc(sizeof(int) * size);
+        displs = malloc(sizeof(int) * size);
+        int offset = 0;
+        for (int r = 0; r < size; r++) {
+            int r_rows = (r < rem) ? rows_per_proc + 1 : rows_per_proc;
+            recvcounts[r] = r_rows * out_w * out_ch;
+            displs[r] = offset;
+            offset += recvcounts[r];
+        }
+    }
+
+    // Use Gatherv to collect data from all processes
+    MPI_Gatherv(
+        my_output,
+        my_rows * out_w * out_ch,
+        MPI_FLOAT,
+        output_data,
+        recvcounts,
+        displs,
+        MPI_FLOAT,
+        0,
+        comm
+    );
+
+    free(input.data);
+    free(my_output);
+    if (rank == 0) {
+        free(recvcounts);
+        free(displs);
+        return (Tensor3D){ out_w, out_h, out_ch, output_data };
+    } else {
+        return (Tensor3D){0, 0, 0, NULL};
+    }
+}
+Tensor3D conv_forward_mpi(Tensor3D input, ConvLayer *layer, MPI_Comm comm) {
+    int rank, size;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
+
+    int out_w = input.width - layer->kernel_size + 1;
+    int out_h = input.height - layer->kernel_size + 1;
+    int out_ch = layer->out_channels;
+    int in_ch = layer->in_channels;
+    int ks = layer->kernel_size;
+    int total_out = out_w * out_h * out_ch;
+
+    int channels_per_proc = out_ch / size;
+    int rem = out_ch % size;
+    int my_channels = (rank < rem) ? channels_per_proc + 1 : channels_per_proc;
+    int start_channel = rank * channels_per_proc + (rank < rem ? rank : rem);
+
+    float *my_output = malloc(sizeof(float) * my_channels * out_w * out_h);
+
+    for (int oc = 0; oc < my_channels; oc++) {
+        int global_oc = start_channel + oc;
+        for (int i = 0; i < out_h; i++) {
+            for (int j = 0; j < out_w; j++) {
+                float sum = 0.0f;
+                for (int ic = 0; ic < in_ch; ic++) {
+                    for (int ki = 0; ki < ks; ki++) {
+                        for (int kj = 0; kj < ks; kj++) {
+                            int in_y = i + ki;
+                            int in_x = j + kj;
+                            int in_idx = ic * input.height * input.width + in_y * input.width + in_x;
+                            int w_idx = global_oc * in_ch * ks * ks + ic * ks * ks + ki * ks + kj;
+                            sum += input.data[in_idx] * layer->weights[w_idx];
+                        }
+                    }
+                }
+                int out_idx = oc * out_h * out_w + i * out_w + j;
+                my_output[out_idx] = leaky_relu(sum + layer->biases[global_oc]);
+            }
+        }
+    }
+
+    float *output_data = NULL;
+    if (rank == 0) output_data = malloc(sizeof(float) * total_out);
+
+    int *recvcounts = NULL, *displs = NULL;
+    if (rank == 0) {
+        recvcounts = malloc(sizeof(int) * size);
+        displs = malloc(sizeof(int) * size);
+        int offset = 0;
+        for (int r = 0; r < size; r++) {
+            int ch = (r < rem) ? channels_per_proc + 1 : channels_per_proc;
+            recvcounts[r] = ch * out_w * out_h;
+            displs[r] = offset;
+            offset += recvcounts[r];
+        }
+    }
+
+    MPI_Gatherv(
+        my_output,
+        my_channels * out_w * out_h,
+        MPI_FLOAT,
+        output_data,
+        recvcounts,
+        displs,
+        MPI_FLOAT,
+        0,
+        comm
+    );
+
+    free(input.data);
+    free(my_output);
+    if (rank == 0) {
+        free(recvcounts);
+        free(displs);
+        return (Tensor3D){ out_w, out_h, out_ch, output_data };
+    } else {
+        return (Tensor3D){0, 0, 0, NULL};
+    }
+}
 Tensor3D maxpool_forward(Tensor3D input, int pool_size) {
     int out_w = input.width / pool_size;
     int out_h = input.height / pool_size;
@@ -132,4 +292,32 @@ void cnn_forward(CNN *cnn) {
 
     cnn->output = v.data[0];
     free(v.data);
+}
+
+void cnn_forward_mpi(CNN *cnn, MPI_Comm comm) {
+    int rank;
+    MPI_Comm_rank(comm, &rank);
+
+    int total_input = cnn->input_width * cnn->input_height * cnn->input_channels;
+    float *copy = malloc(sizeof(float) * total_input);
+    for (int i = 0; i < total_input; i++) copy[i] = cnn->input_data[i];
+
+    Tensor3D x = { cnn->input_width, cnn->input_height, cnn->input_channels, copy };
+
+    for (int i = 0; i < cnn->num_conv_layers; i++) {
+        x = conv_forward_mpi_by_row(x, &cnn->conv_layers[i], comm);
+        if (rank == 0) {
+            // continue;
+            x = maxpool_forward(x, 2);
+        }
+    }
+
+    if (rank == 0) {
+        Vector v = flatten(x);
+        for (int i = 0; i < cnn->num_fc_layers; i++) {
+            v = fc_forward(v, &cnn->fc_layers[i]);
+        }
+        cnn->output = v.data[0];
+        free(v.data);
+    }
 }
