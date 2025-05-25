@@ -4,25 +4,26 @@
 #include "cnn.h"
 #include "utils.h"
 #include "mpi.h"
+#include <string.h>
 
 int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
     srand(time(NULL));
     
     CNN cnn = {0};
-    cnn.input_width = 512;
-    cnn.input_height = 512;
+    cnn.input_width = 256;
+    cnn.input_height = 256;
     cnn.input_channels = 3;
 
     int kernel_size = 5;
-    int max_pool_stride = 2;
+    int max_pool_stride = 1;
     int hidden_dim = 128;
     int current_width = cnn.input_width;
     int current_height = cnn.input_height;
     int current_channels = cnn.input_channels;
     float mean = 0.0f;
     float std = 1.0f;
-    int NUM_CONV_LAYERS = 4;
+    int NUM_CONV_LAYERS = 60;
 
     int input_volume = current_width * current_height * current_channels;
     cnn.input_data = malloc(sizeof(float) * input_volume);
@@ -32,7 +33,7 @@ int main(int argc, char **argv) {
     // Add convolutional layers
     
     for (int i = 0; i < NUM_CONV_LAYERS; ++i) {
-        int out_channels = (i + 1) * 4; // increase depth
+        int out_channels = 3; // increase depth
         add_conv_layer(&cnn, out_channels, kernel_size, current_channels, mean, std);
         current_width = (current_width - kernel_size + 1) / max_pool_stride;
         current_height = (current_height - kernel_size + 1) / max_pool_stride;
@@ -53,6 +54,22 @@ int main(int argc, char **argv) {
         hidden_dim /= 2;
         i++;
     }
+    int rank;
+    
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    // Load or Save
+    // printf("This is %s\n", argv[1]);
+    // if (rank == 0) save_cnn_weights(&cnn, "./ckpts/cnn_weights.bin");
+    if (rank == 0) load_cnn_weights(&cnn, "./ckpts/cnn_weights.bin");
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // if (argc > 1 && strcmp(argv[1], "load") == 0) {
+    //     if (rank == 0) load_cnn_weights(&cnn, "./ckpts/cnn_weights.bin");
+    //     MPI_Barrier(MPI_COMM_WORLD); // ensure sync
+    // } else if (argc > 1 && strcmp(argv[1], "save") == 0) {
+    //     if (rank == 0) save_cnn_weights(&cnn, "./ckpts/cnn_weights.bin");
+    //     
+    // }
+
     clock_t start = clock();
     cnn_forward(&cnn);
     printf("CNN Output: %f\n", cnn.output);
@@ -60,24 +77,19 @@ int main(int argc, char **argv) {
     double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
     printf("Elapsed time: %.6f seconds\n", elapsed);
 
-    start = clock();
-    cnn_forward(&cnn);
-    printf("CNN Output: %f\n", cnn.output);
-    end = clock();
-    elapsed = (double)(end - start) / CLOCKS_PER_SEC;
-    printf("Elapsed time: %.6f seconds\n", elapsed);
-    start = clock();
+    MPI_Barrier(MPI_COMM_WORLD);  // Ensure all ranks start at the same time
+    double start_mpi = MPI_Wtime();
     cnn_forward_mpi(&cnn, MPI_COMM_WORLD);
-    end = clock();
-    elapsed = (double)(end - start) / CLOCKS_PER_SEC;
-    printf("Elapsed time: %.6f seconds\n", elapsed);
-    int rank;
+    MPI_Barrier(MPI_COMM_WORLD);  // Ensure all ranks finish
+    double end_mpi = MPI_Wtime();
+    double elapsed_new = (double)(end_mpi - start_mpi) / CLOCKS_PER_SEC;
     
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0) {
         printf("Final CNN output using MPI: %f\n", cnn.output);
+        printf("Elapsed time using MPI: %.6f seconds\n", elapsed_new);
     }
-
+    
+    
     MPI_Finalize();
     for (int i = 0; i < cnn.num_conv_layers; i++) {
         free(cnn.conv_layers[i].weights);
@@ -88,6 +100,5 @@ int main(int argc, char **argv) {
         free(cnn.fc_layers[i].biases);
     }
     free(cnn.input_data);
-
     return 0;
 }

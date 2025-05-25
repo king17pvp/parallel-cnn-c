@@ -14,7 +14,7 @@ $(TARGET): $(SRC)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 run: $(TARGET)
-	mpirun -np 4 ./$(TARGET)
+	mpirun -np 4 ./$(TARGET) save
 
 clean:
 	rm -f $(TARGET)
