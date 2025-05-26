@@ -2,10 +2,10 @@ CC = gcc
 CFLAGS = -Iinclude -O2
 LDFLAGS = -lm
 
-SRC = src/main.c src/cnn.c src/utils.c
+SRC = src/run_normal.c src/cnn.c src/utils.c
 OBJ = $(SRC:.c=.o)
 
-TARGET = build/cnn_exec
+TARGET = build/cnn_exec_normal
 
 all: $(TARGET)
 

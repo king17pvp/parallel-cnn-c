@@ -3,10 +3,10 @@ CC = mpicc
 CFLAGS = -Iinclude -O2
 LDFLAGS = -lm
 
-SRC = src/main.c src/cnn.c src/utils.c
+SRC = src/run_mpi.c src/cnn.c src/cnn_mpi.c src/utils.c
 OBJ = $(SRC:.c=.o)
 
-TARGET = build/cnn_exec
+TARGET = build/cnn_exec_mpi
 
 all: $(TARGET)
 
