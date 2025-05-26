@@ -1,9 +1,8 @@
 #ifndef CNN_H
 #define CNN_H
 
-#define MAX_CONV_LAYERS 100
-#define MAX_FC_LAYERS 100
-#include "mpi.h"
+#define MAX_CONV_LAYERS 1000
+#define MAX_FC_LAYERS 1000
 // 3D image/tensor
 typedef struct {
     int width, height, channels;
@@ -43,11 +42,6 @@ typedef struct {
 
     float output;
 } CNN;
-
-void add_conv_layer(CNN *cnn, int out_channels, int kernel_size, int in_channels, float mean, float stddev);
-void add_fc_layer(CNN *cnn, int in_features, int out_features, float mean, float stddev);
+Vector flatten(Tensor3D input);
 void cnn_forward(CNN *cnn);
-void cnn_forward_mpi(CNN *cnn, MPI_Comm comm);
-void save_cnn_weights(CNN *cnn, const char *filename);
-void load_cnn_weights(CNN *cnn, const char *filename);
 #endif
