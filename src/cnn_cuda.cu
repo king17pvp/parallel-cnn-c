@@ -18,27 +18,27 @@ __device__ float leaky_relu_cuda(float x) {
 }
 
 __global__ void conv_forward_kernel(const float *input, const float *weights, const float *biases,
-                                    float *output, int in_w, int in_h, int in_c,
-                                    int out_w, int out_h, int out_c, int ks) {
-    int oc = blockIdx.z;
-    int i = blockIdx.y * blockDim.y + threadIdx.y;
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
+                                    float *output, int in_width, int in_height, int in_channel,
+                                    int out_width, int out_height, int out_channel, int kernel_size) {
+    int out_c = blockIdx.z * blockDim.z + threadIdx.z;
+    int out_x = blockIdx.x * blockDim.x + threadIdx.x;
+    int out_y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (i < out_h && j < out_w) {
+    if (out_x < out_width && out_y < out_height && out_c < out_channel) {
         float sum = 0.0f;
-        for (int ic = 0; ic < in_c; ++ic) {
-            for (int ki = 0; ki < ks; ++ki) {
-                for (int kj = 0; kj < ks; ++kj) {
-                    int in_y = i + ki;
-                    int in_x = j + kj;
-                    int in_idx = ic * in_h * in_w + in_y * in_w + in_x;
-                    int w_idx = oc * in_c * ks * ks + ic * ks * ks + ki * ks + kj;
+        for (int in_c = 0; in_c < in_channel; ++in_c) {
+            for (int ky = 0; ky < kernel_size; ++ky) {
+                for (int kx = 0; kx < kernel_size; ++kx) {
+                    int in_x = out_x + kx;
+                    int in_y = out_y + ky;
+                    int in_idx = in_c * in_height * in_width + in_y * in_width + in_x;
+                    int w_idx = out_c * in_channel * kernel_size * kernel_size + in_c * kernel_size * kernel_size + ky * kernel_size + kx;
                     sum += input[in_idx] * weights[w_idx];
                 }
             }
         }
-        int out_idx = oc * out_h * out_w + i * out_w + j;
-        output[out_idx] = leaky_relu_cuda(sum + biases[oc]);
+        int out_idx = out_c * out_height * out_width + out_y * out_width + out_x;
+        output[out_idx] = leaky_relu_cuda(sum + biases[out_c]);
     }
 }
 
@@ -80,28 +80,31 @@ Tensor3D conv_forward_cuda(Tensor3D input, ConvLayer *layer) {
     return (Tensor3D){ out_w, out_h, out_c, output_data };
 }
 
-__global__ void maxpool_kernel(const float *input, float *output,
-                               int in_w, int in_h, int in_c,
-                               int out_w, int out_h, int pool_size) {
-    int c = blockIdx.z;
-    int i = blockIdx.y * blockDim.y + threadIdx.y;
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (i < out_h && j < out_w) {
-        float max_val = -1e9;
-        for (int pi = 0; pi < pool_size; pi++) {
-            for (int pj = 0; pj < pool_size; pj++) {
-                int in_y = i * pool_size + pi;
-                int in_x = j * pool_size + pj;
-                if (in_y < in_h && in_x < in_w) {
-                    int in_idx = c * in_h * in_w + in_y * in_w + in_x;
-                    max_val = fmaxf(max_val, input[in_idx]);
-                }
-            }
+__global__ void maxpool_kernel(
+    float *input, float *output,
+    int in_width, int in_height, int channels,
+    int out_width, int out_height, int pool_size
+) {
+    int out_x = blockIdx.x * blockDim.x + threadIdx.x;
+    int out_y = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.z * blockDim.z + threadIdx.z;
+   
+    if (out_x >= out_width || out_y >= out_height || c >= channels) return;
+   
+    float max_val = -1e9f;
+   
+    for (int py = 0; py < pool_size; py++) {
+        for (int px = 0; px < pool_size; px++) {
+            int in_x = out_x * pool_size + px;
+            int in_y = out_y * pool_size + py;
+           
+            int in_idx = c * in_height * in_width + in_y * in_width + in_x;
+            max_val = fmaxf(max_val, input[in_idx]);
         }
-        int out_idx = c * out_h * out_w + i * out_w + j;
-        output[out_idx] = max_val;
     }
+   
+    int out_idx = c * out_height * out_width + out_y * out_width + out_x;
+    output[out_idx] = max_val;
 }
 
 Tensor3D maxpool_forward_cuda(Tensor3D input, int pool_size) {
@@ -139,18 +142,18 @@ Vector flatten_cuda(Tensor3D input) {
 }
 
 __global__ void fc_forward_kernel(const float *input, const float *weights, const float *biases,
-                                  float *output, int in_features, int out_features, int apply_activation) {
+                                  float *output, int in_features, int out_features) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < out_features) {
         float sum = 0.0f;
         for (int j = 0; j < in_features; j++) {
             sum += weights[idx * in_features + j] * input[j];
         }
-        output[idx] = apply_activation ? leaky_relu_cuda(sum + biases[idx]) : (sum + biases[idx]);
+        output[idx] = leaky_relu_cuda(sum + biases[idx]);
     }
 }
 
-Vector fc_forward_cuda(Vector input, FullyConnectedLayer *layer, int apply_activation) {
+Vector fc_forward_cuda(Vector input, FullyConnectedLayer *layer) {
     int in_features = input.size;
     int out_features = layer->out_features;
 
@@ -167,7 +170,7 @@ Vector fc_forward_cuda(Vector input, FullyConnectedLayer *layer, int apply_activ
     int threads = 256;
     int blocks = (out_features + threads - 1) / threads;
     fc_forward_kernel<<<blocks, threads>>>(d_input, d_weights, d_biases, d_output,
-                                           in_features, out_features, apply_activation);
+                                           in_features, out_features);
     CUDA_CHECK(cudaDeviceSynchronize());
 
     float *output_data = (float*)malloc(sizeof(float) * out_features);
@@ -196,8 +199,8 @@ void cnn_forward_cuda(CNN *cnn) {
 
     Vector v = flatten_cuda(x);
     for (int i = 0; i < cnn->num_fc_layers; i++) {
-        int apply_activation = (i != cnn->num_fc_layers - 1);
-        v = fc_forward_cuda(v, &cnn->fc_layers[i], apply_activation);
+        // int apply_activation = (i != cnn->num_fc_layers - 1);
+        v = fc_forward_cuda(v, &cnn->fc_layers[i]);
     }
     cnn->output = v.data[0];
 
