@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
     cnn.input_height = 64;
     cnn.input_channels = 3;
 
-    int kernel_size = 3;
+    int kernel_size = 5;
     int max_pool_stride = 1;
     int hidden_dim = 16;
     int current_width = cnn.input_width;
@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
     int current_channels = cnn.input_channels;
     float mean = 1.0f;
     float std = 0.0f;
-    int NUM_CONV_LAYERS = 5;
+    int NUM_CONV_LAYERS = 10;
 
     int input_volume = current_width * current_height * current_channels;
     cnn.input_data = malloc(sizeof(float) * input_volume);
