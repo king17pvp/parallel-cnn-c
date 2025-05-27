@@ -1,0 +1,20 @@
+# Use NVCC for compiling both .cu and .c files
+NVCC = nvcc
+CFLAGS = -Iinclude -O2
+LDFLAGS = -lm
+
+SRC = src/run_cuda.c src/cnn.c src/cnn_cuda.cu src/utils.c
+OBJ = $(SRC:.c=.o)
+
+TARGET = build/cnn_exec_cuda
+
+all: $(TARGET)
+
+$(TARGET): $(SRC)
+	$(NVCC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+run: $(TARGET)
+	./$(TARGET)
+
+clean:
+	rm -f $(TARGET)
