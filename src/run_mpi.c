@@ -12,19 +12,19 @@ int main(int argc, char **argv) {
     srand(time(NULL));
     
     CNN cnn = {0};
-    cnn.input_width = 2048;
-    cnn.input_height = 2048;
+    cnn.input_width = 64;
+    cnn.input_height = 64;
     cnn.input_channels = 3;
 
-    int kernel_size = 5;
+    int kernel_size = 3;
     int max_pool_stride = 1;
-    int hidden_dim = 128;
+    int hidden_dim = 16;
     int current_width = cnn.input_width;
     int current_height = cnn.input_height;
     int current_channels = cnn.input_channels;
-    float mean = 0.0f;
-    float std = 1.0f;
-    int NUM_CONV_LAYERS = 500;
+    float mean = 1.0f;
+    float std = 0.0f;
+    int NUM_CONV_LAYERS = 5;
 
     int input_volume = current_width * current_height * current_channels;
     cnn.input_data = malloc(sizeof(float) * input_volume);
