@@ -12,8 +12,8 @@ int main(int argc, char **argv) {
     srand(time(NULL));
     
     CNN cnn = {0};
-    cnn.input_width = 2048;
-    cnn.input_height = 2048;
+    cnn.input_width = 64;
+    cnn.input_height = 64;
     cnn.input_channels = 3;
 
     int kernel_size = 5;
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     int current_channels = cnn.input_channels;
     float mean = 0.0f;
     float std = 1.0f;
-    int NUM_CONV_LAYERS = 500;
+    int NUM_CONV_LAYERS = 12;
 
     int input_volume = current_width * current_height * current_channels;
     cnn.input_data = malloc(sizeof(float) * input_volume);
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
         cnn.input_data[i] = rand_normal(mean, std);
     
     for (int i = 0; i < NUM_CONV_LAYERS; ++i) {
-        int out_channels = 3; // increase depth
+        int out_channels = (i + 1) * 4; 
         add_conv_layer(&cnn, out_channels, kernel_size, current_channels, mean, std);
         current_width = (current_width - kernel_size + 1) / max_pool_stride;
         current_height = (current_height - kernel_size + 1) / max_pool_stride;
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
     double elapsed = (double)(end_mpi - start_mpi);
     
     if (rank == 0) {
-        printf("Final CNN output using MPI: %f\n", cnn.output);
+        printf("CNN output using MPI: %f\n", cnn.output);
         printf("Elapsed time using MPI: %.6f seconds\n", elapsed);
     }
     MPI_Finalize();

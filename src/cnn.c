@@ -82,7 +82,7 @@ Vector fc_forward(Vector input, FullyConnectedLayer *layer) {
         for (int j = 0; j < input.size; j++) {
             sum += layer->weights[i * input.size + j] * input.data[j];
         }
-        out.data[i] = leaky_relu(sum + layer->biases[i]);
+        out.data[i] = relu(sum + layer->biases[i]);
     }
     free(input.data);
     return out;
