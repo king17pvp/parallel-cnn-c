@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <string.h>
 float relu(float x) {
     return x > 0 ? x : 0;
 }
@@ -118,4 +119,32 @@ void add_fc_layer(CNN *cnn, int in_features, int out_features, float mean, float
         layer->weights[i] = rand_normal(mean, stddev);
     for (int i = 0; i < out_features; i++)
         layer->biases[i] = rand_normal(mean, stddev);
+}
+
+void load_config_from_txt(const char *filename, int *input_w, int *input_h, int *input_c,
+                          int *num_conv, int *ks, int *hidden, float *mean, float *std, int *max_pool_stride) {
+    FILE *fp = fopen(filename, "r");
+    if (!fp) {
+        perror("Failed to open config file");
+        exit(1);
+    }
+
+    char line[128];
+    while (fgets(line, sizeof(line), fp)) {
+        char key[64];
+        char val[64];
+        if (sscanf(line, "%[^=]=%s", key, val) == 2) {
+            if (strcmp(key, "input_width") == 0) *input_w = atoi(val);
+            else if (strcmp(key, "input_height") == 0) *input_h = atoi(val);
+            else if (strcmp(key, "input_channels") == 0) *input_c = atoi(val);
+            else if (strcmp(key, "num_conv_layers") == 0) *num_conv = atoi(val);
+            else if (strcmp(key, "kernel_size") == 0) *ks = atoi(val);
+            else if (strcmp(key, "hidden_dim") == 0) *hidden = atoi(val);
+            else if (strcmp(key, "mean") == 0) *mean = atof(val);
+            else if (strcmp(key, "std") == 0) *std = atof(val);
+            else if (strcmp(key, "max_pool_stride") == 0) *max_pool_stride = atof(val);
+        }
+    }
+
+    fclose(fp);
 }

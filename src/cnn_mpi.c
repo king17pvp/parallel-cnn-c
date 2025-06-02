@@ -124,7 +124,7 @@ Tensor3D conv_forward_mpi(Tensor3D input, ConvLayer *layer, MPI_Comm comm) {
                     }
                 }
                 int out_idx = oc * out_h * out_w + i * out_w + j;
-                my_output[out_idx] = leaky_relu(sum + layer->biases[global_oc]);
+                my_output[out_idx] = relu(sum + layer->biases[global_oc]);
             }
         }
     }
@@ -268,7 +268,7 @@ Vector fc_forward_mpi(Vector input, FullyConnectedLayer *layer, MPI_Comm comm) {
         for (int j = 0; j < in_features; j++) {
             sum += layer->weights[global_i * in_features + j] * input.data[j];
         }
-        my_output_data[i] = leaky_relu(sum + layer->biases[global_i]);
+        my_output_data[i] = relu(sum + layer->biases[global_i]);
     }
 
     float *output_data = NULL;
@@ -324,7 +324,7 @@ void cnn_forward_mpi(CNN *cnn, MPI_Comm comm) {
     Tensor3D x = { cnn->input_width, cnn->input_height, cnn->input_channels, copy };
     for (int i = 0; i < cnn->num_conv_layers; i++) {
         x = conv_forward_mpi_by_row(x, &cnn->conv_layers[i], comm);
-        // x = maxpool_forward_mpi_by_row(x, 2, comm);
+        x = maxpool_forward_mpi_by_row(x, 2, comm);
     }
 
     Vector v;

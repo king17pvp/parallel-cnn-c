@@ -82,7 +82,7 @@ Vector fc_forward(Vector input, FullyConnectedLayer *layer) {
         for (int j = 0; j < input.size; j++) {
             sum += layer->weights[i * input.size + j] * input.data[j];
         }
-        out.data[i] = leaky_relu(sum + layer->biases[i]);
+        out.data[i] = relu(sum + layer->biases[i]);
     }
     free(input.data);
     return out;
@@ -97,7 +97,7 @@ void cnn_forward(CNN *cnn) {
 
     for (int i = 0; i < cnn->num_conv_layers; i++) {
         x = conv_forward(x, &cnn->conv_layers[i]);
-        // x = maxpool_forward(x, 2);
+        x = maxpool_forward(x, 2);
     }
 
     Vector v = flatten(x);
