@@ -8,23 +8,19 @@
 
 int main(int argc, char **argv) {
     srand(time(NULL));
-    
+    int input_w, input_h, input_c, num_conv, kernel_size, hidden_dim, max_pool_stride;
+    float mean, std;
+    load_config_from_txt("configs/config1.txt", &input_w, &input_h, &input_c, &num_conv, &kernel_size, &hidden_dim, &mean, &std, &max_pool_stride);
     CNN cnn = {0};
-    cnn.input_width = 64;
-    cnn.input_height = 64;
-    cnn.input_channels = 3;
-
-    int kernel_size = 5;
-    int max_pool_stride = 1;
-    int hidden_dim = 128;
+    cnn.input_width = input_w;
+    cnn.input_height = input_h;
+    cnn.input_channels = input_c;
     int current_width = cnn.input_width;
     int current_height = cnn.input_height;
     int current_channels = cnn.input_channels;
-    float mean = 0.0f;
-    float std = 1.0f;
-    int NUM_CONV_LAYERS = 12;
-
+    int NUM_CONV_LAYERS = num_conv;
     int input_volume = current_width * current_height * current_channels;
+    printf("Normal %.2f, Std %.2f\n", mean, std);
     cnn.input_data = malloc(sizeof(float) * input_volume);
     for (int i = 0; i < input_volume; i++)
         cnn.input_data[i] = rand_normal(mean, std);

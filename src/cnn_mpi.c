@@ -324,7 +324,7 @@ void cnn_forward_mpi(CNN *cnn, MPI_Comm comm) {
     Tensor3D x = { cnn->input_width, cnn->input_height, cnn->input_channels, copy };
     for (int i = 0; i < cnn->num_conv_layers; i++) {
         x = conv_forward_mpi_by_row(x, &cnn->conv_layers[i], comm);
-        // x = maxpool_forward_mpi_by_row(x, 2, comm);
+        x = maxpool_forward_mpi_by_row(x, 2, comm);
     }
 
     Vector v;

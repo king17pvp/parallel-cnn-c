@@ -198,7 +198,7 @@ void cnn_forward_cuda(CNN *cnn) {
 
     for (int i = 0; i < cnn->num_conv_layers; i++) {
         x = conv_forward_cuda(x, &cnn->conv_layers[i]);
-        // x = maxpool_forward_cuda(x, 2);
+        x = maxpool_forward_cuda(x, 2);
     }
 
     Vector v = flatten_cuda(x);

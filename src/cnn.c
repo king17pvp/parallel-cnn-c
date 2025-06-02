@@ -97,7 +97,7 @@ void cnn_forward(CNN *cnn) {
 
     for (int i = 0; i < cnn->num_conv_layers; i++) {
         x = conv_forward(x, &cnn->conv_layers[i]);
-        // x = maxpool_forward(x, 2);
+        x = maxpool_forward(x, 2);
     }
 
     Vector v = flatten(x);
