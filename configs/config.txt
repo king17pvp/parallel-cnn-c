@@ -1,0 +1,9 @@
+input_width=512
+input_height=512
+input_channels=3
+num_conv_layers=5
+kernel_size=5
+hidden_dim=128
+mean=0.0
+std=0.25
+max_pool_stride=2
