@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     srand(time(NULL));
     int input_w, input_h, input_c, num_conv, kernel_size, hidden_dim, max_pool_stride;
     float mean, std;
-    load_config_from_txt("configs/config1.txt", &input_w, &input_h, &input_c, &num_conv, &kernel_size, &hidden_dim, &mean, &std, &max_pool_stride);
+    load_config_from_txt("configs/config.txt", &input_w, &input_h, &input_c, &num_conv, &kernel_size, &hidden_dim, &mean, &std, &max_pool_stride);
     CNN cnn = {0};
     cnn.input_width = input_w;
     cnn.input_height = input_h;
