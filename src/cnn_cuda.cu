@@ -24,7 +24,7 @@ __device__ float relu_cuda(float x) {
 __global__ void conv_forward_kernel(const float *input, const float *weights, const float *biases,
                                     float *output, int in_width, int in_height, int in_channel,
                                     int out_width, int out_height, int out_channel, int kernel_size) {
-    int out_c = blockIdx.z * blockDim.z + threadIdx.z;
+    int out_c = blockIdx.z;
     int out_x = blockIdx.x * blockDim.x + threadIdx.x;
     int out_y = blockIdx.y * blockDim.y + threadIdx.y;
 
