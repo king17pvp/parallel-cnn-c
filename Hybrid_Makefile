@@ -1,32 +1,44 @@
 # Compiler settings
 MPICC = mpicc
 NVCC = nvcc
-CFLAGS = -O3 -std=c99
+CFLAGS = -O3 -std=c99 -I./src
 LDFLAGS = -lm
 
-# Files
-C_SRCS = src/cnn.c src/utils.c src/cnn_hybrid.c src/run_hybrid.c
-CU_SRCS = src/cnn_cuda.cu
-OBJS = $(C_SRCS:.c=.o) cnn_cuda.o
+# Directories
+SRC_DIR = src
+OBJ_DIR = obj
 
-# Output
+# Source files
+C_SRCS = $(wildcard $(SRC_DIR)/*.c)
+CU_SRCS = $(wildcard $(SRC_DIR)/*.cu)
+
+# Object files
+C_OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(C_SRCS))
+CU_OBJS = $(patsubst $(SRC_DIR)/%.cu,$(OBJ_DIR)/%.o,$(CU_SRCS))
+OBJS = $(C_OBJS) $(CU_OBJS)
+
+# Output executable
 TARGET = run_hybrid
 
 # Default rule
-all: $(TARGET)
+all: $(OBJ_DIR) $(TARGET)
 
-# CUDA object
-cnn_cuda.o: cnn_cuda.cu cnn.h cnn_cuda.h
-	$(NVCC) -c $< -o $@ --compiler-options '-fPIC'
+# Create object directory
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
 
-# C objects
-%.o: %.c
+# Compile C files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	$(MPICC) $(CFLAGS) -c $< -o $@
 
-# Final linking
+# Compile CUDA files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cu
+	$(NVCC) -c $< -o $@ --compiler-options '-fPIC'
+
+# Link
 $(TARGET): $(OBJS)
 	$(MPICC) $(CFLAGS) -o $@ $^ -lcudart $(LDFLAGS)
 
 # Clean
 clean:
-	rm -f *.o $(TARGET)
+	rm -rf $(OBJ_DIR) $(TARGET)
