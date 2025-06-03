@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     }
 
     // Prepare multiple test images
-    int num_images = 16;  // Process 16 images in parallel
+    int num_images = 2;  // Process 16 images in parallel
     int input_size = input_w * input_h * input_c;
     float *all_images = NULL;
     float *all_results = NULL;
