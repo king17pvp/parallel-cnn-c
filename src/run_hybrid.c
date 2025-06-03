@@ -73,8 +73,8 @@ int main(int argc, char **argv) {
     float *all_results = NULL;
     
     if (rank == 0) {
-        all_images = malloc(sizeof(float) * num_images * input_size);
-        all_results = malloc(sizeof(float) * num_images);
+        all_images = (float *)malloc(sizeof(float) * num_images * input_size);
+        all_results = (float *)malloc(sizeof(float) * num_images);
         
         // Generate random test images
         for (int img = 0; img < num_images; img++) {
