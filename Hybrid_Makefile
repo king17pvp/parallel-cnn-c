@@ -6,7 +6,7 @@ LDFLAGS = -lm
 
 # Directories
 SRC_DIR = src
-OBJ_DIR = obj
+OBJ_DIR = build
 
 # Source files
 C_SRCS = $(wildcard $(SRC_DIR)/*.c)
@@ -18,7 +18,7 @@ CU_OBJS = $(patsubst $(SRC_DIR)/%.cu,$(OBJ_DIR)/%.o,$(CU_SRCS))
 OBJS = $(C_OBJS) $(CU_OBJS)
 
 # Output executable
-TARGET = run_hybrid
+TARGET = build/cnn_exec_hybrid
 
 # Default rule
 all: $(OBJ_DIR) $(TARGET)
