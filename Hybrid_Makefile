@@ -1,40 +1,32 @@
 # Compiler settings
+MPICC = mpicc
 NVCC = nvcc
-MPICXX = mpic++
-CUDA_INCLUDE = -I/usr/local/cuda/include
-CUDA_LIB = -L/usr/local/cuda/lib64
-MPI_INCLUDE = -I/usr/local/include
-MPI_LIB = -L/usr/local/lib
-INCLUDE = -Iinclude $(CUDA_INCLUDE) $(MPI_INCLUDE)
+CFLAGS = -O3 -std=c99
+LDFLAGS = -lm
 
-# CUDA source files
-CUDA_SRC = src/cnn_cuda.cu
-CUDA_OBJ = $(CUDA_SRC:.cu=.o)
+# Files
+C_SRCS = cnn.c utils.c cnn_hybrid.c run_hybrid.c
+CU_SRCS = cnn_cuda.cu
+OBJS = $(C_SRCS:.c=.o) cnn_cuda.o
 
-# MPI + CUDA hybrid source files
-HYBRID_SRC = src/run_hybrid.c src/cnn_hybrid.c src/utils.c
-HYBRID_OBJ = $(HYBRID_SRC:.c=.o)
+# Output
+TARGET = run_hybrid
 
-# Flags
-CFLAGS = -O3 $(INCLUDE)
-NVCCFLAGS = -O3 $(INCLUDE) -Xcompiler -fPIC
-LDFLAGS = -lcudart -lcuda -lm
-
-# Target
-TARGET = build/cnn_exec_hybrid
-
+# Default rule
 all: $(TARGET)
 
-# Build CUDA objects
-%.o: %.cu
-	$(NVCC) $(NVCCFLAGS) -c $< -o $@
+# CUDA object
+cnn_cuda.o: cnn_cuda.cu cnn.h cnn_cuda.h
+	$(NVCC) -c $< -o $@ --compiler-options '-fPIC'
 
-# Build C/C++ objects
+# C objects
 %.o: %.c
-	$(MPICXX) $(CFLAGS) -c $< -o $@
+	$(MPICC) $(CFLAGS) -c $< -o $@
 
-$(TARGET): $(CUDA_OBJ) $(HYBRID_OBJ)
-	$(MPICXX) -o $@ $^ $(CUDA_LIB) $(MPI_LIB) $(LDFLAGS)
+# Final linking
+$(TARGET): $(OBJS)
+	$(MPICC) $(CFLAGS) -o $@ $^ -lcudart $(LDFLAGS)
 
+# Clean
 clean:
-	rm -f $(CUDA_OBJ) $(HYBRID_OBJ) $(TARGET)
+	rm -f *.o $(TARGET)
