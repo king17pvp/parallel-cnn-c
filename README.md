@@ -84,7 +84,3 @@ This project is licensed under [LICENSE_NAME]. Please refer to the `LICENSE` fil
 ## Contributions
 
 Contributions are welcome! Feel free to open issues or submit pull requests to improve the project.
-
-## Contact
-
-For questions or support, contact [Your Name/Email].
