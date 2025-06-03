@@ -1,44 +1,26 @@
-# Compiler settings
-MPICC = mpicc
+# Use NVCC for compiling everything (MPI-compatible)
 NVCC = nvcc
-CFLAGS = -O3 -std=c99 -I./src
+CFLAGS = -Iinclude -O2
 LDFLAGS = -lm
 
-# Directories
-SRC_DIR = src
-OBJ_DIR = build
+# Add support for MPI
+MPIFLAGS = -Xcompiler "-fopenmp -fPIC" -lcudart -lmpi
 
-# Source files
-C_SRCS = $(wildcard $(SRC_DIR)/*.c)
-CU_SRCS = $(wildcard $(SRC_DIR)/*.cu)
-
-# Object files
-C_OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(C_SRCS))
-CU_OBJS = $(patsubst $(SRC_DIR)/%.cu,$(OBJ_DIR)/%.o,$(CU_SRCS))
-OBJS = $(C_OBJS) $(CU_OBJS)
-
-# Output executable
+# Source files for hybrid
+SRC = src/run_hybrid.c src/cnn.c src/cnn_hybrid.c src/cnn_cuda.cu src/utils.c
 TARGET = build/cnn_exec_hybrid
 
-# Default rule
-all: $(OBJ_DIR) $(TARGET)
+# Default build
+all: $(TARGET)
 
-# Create object directory
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
+# Link all sources into final executable
+$(TARGET): $(SRC)
+	$(NVCC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(MPIFLAGS)
 
-# Compile C files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(MPICC) $(CFLAGS) -c $< -o $@
+# Run the hybrid executable (adjust -np as needed)
+run: $(TARGET)
+	mpirun -np 4 ./$(TARGET)
 
-# Compile CUDA files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cu
-	$(NVCC) -c $< -o $@ --compiler-options '-fPIC'
-
-# Link
-$(TARGET): $(OBJS)
-	$(MPICC) $(CFLAGS) -o $@ $^ -lcudart $(LDFLAGS)
-
-# Clean
+# Clean build artifacts
 clean:
-	rm -rf $(OBJ_DIR) $(TARGET)
+	rm -f $(TARGET)
