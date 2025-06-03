@@ -5,8 +5,8 @@ CFLAGS = -O3 -std=c99
 LDFLAGS = -lm
 
 # Files
-C_SRCS = cnn.c utils.c cnn_hybrid.c run_hybrid.c
-CU_SRCS = cnn_cuda.cu
+C_SRCS = src/cnn.c src/utils.c src/cnn_hybrid.c src/run_hybrid.c
+CU_SRCS = src/cnn_cuda.cu
 OBJS = $(C_SRCS:.c=.o) cnn_cuda.o
 
 # Output
