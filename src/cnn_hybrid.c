@@ -40,14 +40,14 @@ void cnn_forward_hybrid(float *all_images, int total_images, CNN *cnn, float *al
     int input_size = cnn->input_width * cnn->input_height * cnn->input_channels;
     
     // Allocate memory for local images and results
-    float *my_images = malloc(sizeof(float) * my_num_images * input_size);
-    float *my_results = malloc(sizeof(float) * my_num_images);
+    float *my_images = (float *)malloc(sizeof(float) * my_num_images * input_size);
+    float *my_results = (float *)malloc(sizeof(float) * my_num_images);
 
     // Distribute images to processes
     int *recvcounts = NULL, *displs = NULL;
     if (rank == 0) {
-        recvcounts = malloc(sizeof(int) * size);
-        displs = malloc(sizeof(int) * size);
+        recvcounts = (int *)malloc(sizeof(int) * size);
+        displs = (int *)malloc(sizeof(int) * size);
         int offset = 0;
         for (int r = 0; r < size; r++) {
             int num = images_per_proc + (r < remainder ? 1 : 0);

@@ -1,40 +1,22 @@
-# Compiler settings
+# Use NVCC for compiling everything (MPI + CUDA)
 NVCC = nvcc
-MPICXX = mpic++
-CUDA_INCLUDE = -I/usr/local/cuda/include
-CUDA_LIB = -L/usr/local/cuda/lib64
-MPI_INCLUDE = -I/usr/local/include
-MPI_LIB = -L/usr/local/lib
-INCLUDE = -Iinclude $(CUDA_INCLUDE) $(MPI_INCLUDE)
+CFLAGS = -Iinclude -O2
 
-# CUDA source files
-CUDA_SRC = src/cnn_cuda.cu
-CUDA_OBJ = $(CUDA_SRC:.cu=.o)
+# You may need to change this depending on your system
+MPI_INC = $(shell mpicc --showme:compile)
+MPI_LIB = $(shell mpicc --showme:link)
 
-# MPI + CUDA hybrid source files
-HYBRID_SRC = src/run_hybrid.c src/cnn_hybrid.c src/utils.c
-HYBRID_OBJ = $(HYBRID_SRC:.c=.o)
-
-# Flags
-CFLAGS = -O3 $(INCLUDE)
-NVCCFLAGS = -O3 $(INCLUDE) -Xcompiler -fPIC
-LDFLAGS = -lcudart -lcuda -lm
-
-# Target
+# Source files
+SRC = src/run_hybrid.c src/cnn.c src/cnn_hybrid.c src/cnn_cuda.cu src/utils.c
 TARGET = build/cnn_exec_hybrid
 
 all: $(TARGET)
 
-# Build CUDA objects
-%.o: %.cu
-	$(NVCC) $(NVCCFLAGS) -c $< -o $@
+$(TARGET): $(SRC)
+	$(NVCC) $(CFLAGS) -o $@ $^ -lcudart -lm $(MPI_INC) $(MPI_LIB)
 
-# Build C/C++ objects
-%.o: %.c
-	$(MPICXX) $(CFLAGS) -c $< -o $@
-
-$(TARGET): $(CUDA_OBJ) $(HYBRID_OBJ)
-	$(MPICXX) -o $@ $^ $(CUDA_LIB) $(MPI_LIB) $(LDFLAGS)
+run: $(TARGET)
+	mpirun -np 4 ./$(TARGET)
 
 clean:
-	rm -f $(CUDA_OBJ) $(HYBRID_OBJ) $(TARGET)
+	rm -f $(TARGET)
