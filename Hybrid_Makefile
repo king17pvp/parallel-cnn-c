@@ -1,26 +1,22 @@
-# Use NVCC for compiling everything (MPI-compatible)
+# Use NVCC for compiling everything (MPI + CUDA)
 NVCC = nvcc
 CFLAGS = -Iinclude -O2
-LDFLAGS = -lm
 
-# Add support for MPI
-MPIFLAGS = -Xcompiler "-fopenmp -fPIC" -lcudart -lmpi
+# You may need to change this depending on your system
+MPI_INC = $(shell mpicc --showme:compile)
+MPI_LIB = $(shell mpicc --showme:link)
 
-# Source files for hybrid
+# Source files
 SRC = src/run_hybrid.c src/cnn.c src/cnn_hybrid.c src/cnn_cuda.cu src/utils.c
 TARGET = build/cnn_exec_hybrid
 
-# Default build
 all: $(TARGET)
 
-# Link all sources into final executable
 $(TARGET): $(SRC)
-	$(NVCC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(MPIFLAGS)
+	$(NVCC) $(CFLAGS) -o $@ $^ -lcudart -lm $(MPI_INC) $(MPI_LIB)
 
-# Run the hybrid executable (adjust -np as needed)
 run: $(TARGET)
 	mpirun -np 4 ./$(TARGET)
 
-# Clean build artifacts
 clean:
 	rm -f $(TARGET)
