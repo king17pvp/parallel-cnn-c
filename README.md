@@ -1,13 +1,90 @@
 # parallel-cnn-c
 
-## How to run
+## Project Overview
 
-Firstly, clone the repo, then CD to the project file
+`parallel-cnn-c` is a project that implements a Convolutional Neural Network (CNN) in C with parallel computing techniques. The goal is to leverage parallelism to optimize the performance of CNN operations, such as convolution, pooling, and activation functions.
 
-```cd parallel-cnn-c```
+## Features
 
-Then
+- **Parallel Computing**: Utilizes multi-threading or other parallel computing techniques to speed up CNN operations.
+- **Configurable Parameters**: Reads configuration values such as input dimensions, kernel size, and number of layers from a file.
+- **Lightweight Implementation**: Written in C for high performance and low-level control.
 
-```make```
+## File Structure
 
-```./build/cnn_exec```
+- **src/**: Contains the source code files, including the main CNN implementation and utility functions.
+- **build/**: Directory where compiled binaries are stored.
+- **data/**: Directory for input data and configuration files.
+- **README.md**: Documentation for the project.
+- **Makefile**: Build instructions for the project.
+
+## Prerequisites
+
+Before running the project, ensure you have the following installed:
+
+- GCC (GNU Compiler Collection)
+- Make
+- A compatible C runtime environment
+
+## How to Run
+
+1. Clone the repository:
+
+   ```bash
+   git clone <repository-url>
+   ```
+
+2. Navigate to the project directory:
+
+   ```bash
+   cd parallel-cnn-c
+   ```
+
+3. Build the project using `make`:
+
+   ```bash
+   make
+   ```
+
+4. Run the executable:
+
+   ```bash
+   ./build/cnn_exec
+   ```
+
+## Configuration
+
+The project reads configuration values from a file. The utility function in `src/utils.c` parses key-value pairs from the configuration file. Supported keys include:
+
+- `input_width`: Width of the input image.
+- `input_height`: Height of the input image.
+- `input_channels`: Number of channels in the input image.
+- `num_conv_layers`: Number of convolutional layers.
+- `kernel_size`: Size of the convolutional kernel.
+- `hidden_dim`: Dimension of the hidden layer.
+- `mean`: Mean value for normalization.
+- `std`: Standard deviation for normalization.
+- `max_pool_stride`: Stride value for max pooling.
+
+Ensure the configuration file is correctly formatted and placed in the appropriate directory.
+
+## Debugging and Development
+
+The `.gitignore` file excludes common build artifacts and temporary files, such as:
+
+- Object files (`*.o`, `*.obj`)
+- Executables (`*.exe`, `*.out`)
+- Debug files (`*.pdb`, `*.dSYM`)
+- IDE-specific files (`.vscode/`)
+
+## License
+
+This project is licensed under [LICENSE_NAME]. Please refer to the `LICENSE` file for more details.
+
+## Contributions
+
+Contributions are welcome! Feel free to open issues or submit pull requests to improve the project.
+
+## Contact
+
+For questions or support, contact [Your Name/Email].
