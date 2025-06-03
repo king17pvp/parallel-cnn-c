@@ -77,10 +77,3 @@ The `.gitignore` file excludes common build artifacts and temporary files, such 
 - Debug files (`*.pdb`, `*.dSYM`)
 - IDE-specific files (`.vscode/`)
 
-## License
-
-This project is licensed under [LICENSE_NAME]. Please refer to the `LICENSE` file for more details.
-
-## Contributions
-
-Contributions are welcome! Feel free to open issues or submit pull requests to improve the project.
