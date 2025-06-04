@@ -133,7 +133,7 @@ Tensor3D maxpool_forward_cuda(Tensor3D input, int pool_size) {
 
     cudaFree(d_input);
     cudaFree(d_output);
-    free(input.data);  // optional if no reuse
+    free(input.data);
 
     return (Tensor3D){out_w, out_h, in_c, h_output};
 }
@@ -141,7 +141,7 @@ Tensor3D maxpool_forward_cuda(Tensor3D input, int pool_size) {
 
 Vector flatten_cuda(Tensor3D input) {
     int total = input.width * input.height * input.channels;
-    float *flat = input.data; // Directly reuse
+    float *flat = input.data;
     return (Vector){ total, flat };
 }
 
@@ -203,7 +203,6 @@ void cnn_forward_cuda(CNN *cnn) {
 
     Vector v = flatten_cuda(x);
     for (int i = 0; i < cnn->num_fc_layers; i++) {
-        // int apply_activation = (i != cnn->num_fc_layers - 1);
         v = fc_forward_cuda(v, &cnn->fc_layers[i]);
     }
     cnn->output = v.data[0];
