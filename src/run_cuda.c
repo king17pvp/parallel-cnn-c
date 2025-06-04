@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
         cnn.input_data[i] = rand_normal(mean, std);
     
     for (int i = 0; i < NUM_CONV_LAYERS; ++i) {
-        int out_channels = (i + 1) * 4; // increase depth
+        int out_channels = (i + 1) * 4; 
         add_conv_layer(&cnn, out_channels, kernel_size, current_channels, mean, std);
         current_width = (current_width - kernel_size + 1) / max_pool_stride;
         current_height = (current_height - kernel_size + 1) / max_pool_stride;

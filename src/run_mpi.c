@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     MPI_Barrier(MPI_COMM_WORLD);  // Ensure all ranks start at the same time
     double start_mpi = MPI_Wtime();
     cnn_forward_mpi(&cnn, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);  // Ensure all ranks finish
+    MPI_Barrier(MPI_COMM_WORLD);  
     double end_mpi = MPI_Wtime();
     double elapsed = (double)(end_mpi - start_mpi);
     
