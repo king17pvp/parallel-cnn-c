@@ -27,7 +27,6 @@ Before running the project, ensure you have the following installed:
 - A compatible C runtime environment
 
 ## How to Run
-
 1. Clone the repository:
 
    ```bash
@@ -39,17 +38,36 @@ Before running the project, ensure you have the following installed:
    ```bash
    cd parallel-cnn-c
    ```
-
-3. Build the project using `make`:
+### 1) Serial implementation
+Execute the commands in consoles as shown below:
 
    ```bash
    make
+  ./build/cnn_exec
    ```
 
-4. Run the executable:
+### 2) MPI implementation
+Execute the commands in consoles as shown below:
 
    ```bash
-   ./build/cnn_exec
+   make -f MPI_Makefile
+   ./build/cnn_exec_mpi
+   ```
+
+### 3) CUDA implementation
+Execute the commands in consoles as shown below:
+
+   ```bash
+   make -f CUDA_Makefile
+   ./build/cnn_exec_cuda
+   ```
+
+### 4) MPI + CUDA implementation
+Execute the commands in consoles as shown below:
+
+   ```bash
+   make -f Hybrid_Makefile
+   mpirun --allow-run-as-root -np 2 ./build/cnn_exec_hybrid load
    ```
 
 ## Configuration
